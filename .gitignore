@@ -1,0 +1,11 @@
+*.log
+.vscode
+build/
+coverage/
+deployment/secrets/decrypted
+lib/
+node_modules/
+.DS_Store
+*.aes
+.env
+/.idea/
