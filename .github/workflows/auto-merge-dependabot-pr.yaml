@@ -1,0 +1,49 @@
+# Workflow to automatically merge dependabot PRs that upgrade to patch or minor
+# versions. Adapted from:
+# https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/automating-dependabot-with-github-actions#enable-auto-merge-on-a-pull-request
+name: Auto-merge Dependabot PR
+
+# Run when a pull request is opened or updated
+on: pull_request
+
+permissions:
+  # Needed to read the repository and merge the PR
+  contents: write
+  # Needed to approve and merge the PR
+  pull-requests: write
+
+jobs:
+  auto-merge-dependabot-pr:
+    name: Auto-merge Dependabot PR
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      # Get metadata about the Dependabot PR so that we can determine what kind of
+      # update it is.
+      - name: Get Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v1.3.3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Approve the PR so it can be merged when there are protection rules that
+      # require approvals. It's important that we do not configure a rule that
+      # requires a review from a code owners because the bot account cannot be a code
+      # owner and so we will never be able to auto-merge Dependabot PRs.
+      - name: Approve PR
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Set the PR to auto-squash-merge when it is a patch or minor version update.
+      # This will merge the PR only after all the other required PR checks have
+      # passed.
+      - name: Auto-merge Dependabot PR
+        if: >-
+          ${{ steps.metadata.outputs.update-type == 'version-update:semver-patch' || 
+          steps.metadata.outputs.update-type == 'version-update:semver-minor' }}
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
