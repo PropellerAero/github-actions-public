@@ -1,47 +1,29 @@
-name: Check PR title contains issue key
+# Workflow to check if the PR name follows Propeller convention and has a valid
+# JIRA ticket ID in it (e.g. [CORE-1234]). This workflow is required to succeed
+# before the PR can be merged.
+name: Check PR title
 
+# Run when a pull request to the main branch is opened, edited, has commits pushed,
+# or is reopened.
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  check-pr-title:
-    runs-on: ubuntu-latest
+  check-pr-name:
+    name: Check PR title
+    runs-on: k8s-arm64-small
     steps:
-      - name: Git clone the repository
-        uses: actions/checkout@v4
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Check PR title contains issue key
-        run: cd github-actions && yarn install && ./node_modules/.bin/checkPullRequestDescription
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          JIRA_USER: ${{ secrets.JIRA_USER }}
-          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  generate-issue-link:
-    needs: check-pr-title
-    runs-on: ubuntu-latest
-    steps:
-      - name: Extract issue key from PR title
-        uses: actions-ecosystem/action-regex-match@v2
-        id: regex-match
-        with:
-          text: ${{ github.event.pull_request.title }}
-          regex: '([A-Za-z]+-\d+)'
-
-      - name: Comment on PR with link to Jira ticket
-        uses: thollander/actions-comment-pull-request@v2
-        if: ${{ steps.regex-match.outputs.match != '' }}
-        with:
-          message: |
-            :link: Jira Issue: [${{ steps.regex-match.outputs.group1 }}](https://propelleraero.atlassian.net/browse/${{ steps.regex-match.outputs.group1 }})
-          comment_tag: issue_key_link
-          mode: upsert
+      # Check the PR title has a valid JIRA ticket ID in it and amend the PR
+      # description with the JIRA ticket ID if it is missing.
+      - name: Check PR title
+        run: >-
+          check-pr-title
+            --repository-name ${{ github.event.repository.full_name }}
+            --pr-number ${{ github.event.pull_request.number }}
+            --github-token ${{ secrets.GITHUB_TOKEN }}
+            --jira-user ${{ secrets.JIRA_USER }}
+            --jira-token ${{ secrets.JIRA_TOKEN }}
+            --amend-pr-description
