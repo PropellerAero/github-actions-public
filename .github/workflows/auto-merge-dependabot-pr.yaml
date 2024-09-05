@@ -47,3 +47,13 @@ jobs:
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # We need at least one job in this workflow to pass if the PR is not a dependabot
+  # PR otherwise we will block non-dependabot PRs from being merged.
+  pass-non-dependabot-pr:
+    name: Pass if not a Dependabot PR
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pass if not a Dependabot PR
+        run: echo "This is not a Dependabot PR. Passing."
