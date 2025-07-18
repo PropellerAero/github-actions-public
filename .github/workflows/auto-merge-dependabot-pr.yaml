@@ -4,7 +4,10 @@
 name: Auto-merge Dependabot PR
 
 # Run when a pull request is opened or updated
-on: pull_request
+on:
+  pull_request:
+    branches:
+      - "dependabot/**"
 
 permissions:
   # Needed to read the repository and merge the PR
